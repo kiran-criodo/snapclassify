@@ -1,0 +1,13 @@
+# The project's container: `docker compose up -d --build app`, then `docker compose exec app bash`.
+# CPU only. Keys stay in .env: `python -m snapclassify.evaluate --compare` reads /workspace/.env each time it runs,
+# so a key you add later works without rebuilding the container.
+services:
+  app:
+    build: .
+    working_dir: /workspace
+    volumes: [".:/workspace"]
+    command: sleep infinity
+    ports: ["8501:8501"]            # the app: streamlit run app/streamlit_app.py, then http://localhost:8501
+    shm_size: "1gb"                 # the training loop's data workers share batches through /dev/shm
+    environment:
+      TZ: UTC

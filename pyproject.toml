@@ -1,0 +1,11 @@
+[project]
+name = "me-snapclassify"
+version = "0.1.0"
+description = "SnapClassify (Crio Micro-Experience): a pet-breed suggester, trained, measured and shipped"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::FutureWarning"]

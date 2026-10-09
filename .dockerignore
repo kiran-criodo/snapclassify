@@ -1,0 +1,12 @@
+# Never copy keys, git history, caches or local data into the image.
+.env
+.git
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+build/
+logs/
+# The dataset (CC BY-SA 4.0, about 800 MB) and training checkpoints stay out of the image.
+data/pets/
+models/

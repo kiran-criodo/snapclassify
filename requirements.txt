@@ -1,0 +1,13 @@
+# The dev container and the grader (CPU PyTorch wheels; the app itself installs app/requirements.txt instead).
+# Exact pins for PyTorch and ONNX: the export and the tests depend on their versions.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0
+torchvision==0.29.0
+onnx==1.23.1
+onnxscript==0.7.2        # torch.onnx.export's exporter needs it
+onnxruntime==1.30.0
+streamlit==1.64.0
+google-genai>=2.25,<3    # the Gemini comparison: vision on 50 test photos
+pillow>=11
+numpy>=2
+pytest>=8,<9

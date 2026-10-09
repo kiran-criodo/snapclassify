@@ -1,0 +1,13 @@
+{
+  "name": "SnapClassify",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-python.debugpy", "charliermarsh.ruff"],
+      "settings": {"python.testing.pytestEnabled": true, "python.testing.pytestArgs": ["tests"]}
+    }
+  }
+}

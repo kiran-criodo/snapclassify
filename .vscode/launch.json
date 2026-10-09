@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {"name": "pytest: current file", "type": "debugpy", "request": "launch", "module": "pytest",
+     "args": ["-q", "${file}"], "env": {"TZ": "UTC"}, "console": "integratedTerminal", "justMyCode": false},
+    {"name": "train --synthetic", "type": "debugpy", "request": "launch", "module": "snapclassify.train",
+     "args": ["--synthetic"], "console": "integratedTerminal"},
+    {"name": "app (streamlit)", "type": "debugpy", "request": "launch", "module": "streamlit",
+     "args": ["run", "app/streamlit_app.py"], "console": "integratedTerminal"}
+  ]
+}

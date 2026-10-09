@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Crio pre-push hook. Install: cp __CRIO__/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# Blocks pushing secrets; lints when ruff is installed. (Tests are not run here: work in
+# progress on the current module is expected to be red.)
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+  echo "pre-push: .env is tracked. Run: git rm --cached .env  (keep secrets out of git)"
+  exit 1
+fi
+if command -v ruff >/dev/null 2>&1; then
+  ruff check --config __CRIO__/ruff.toml snapclassify app tests
+fi

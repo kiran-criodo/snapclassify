@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+build/
+.ipynb_checkpoints/
+# The dataset is CC BY-SA 4.0 and about 800 MB: downloaded at run time, never committed.
+data/pets/
+# Training checkpoints; the app's model (app/model/) IS committed.
+models/
+*.onnx.data

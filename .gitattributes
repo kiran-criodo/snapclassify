@@ -1,0 +1,6 @@
+# Check out text files with LF line endings on every OS, so bash scripts keep working after a clone made with
+# Git for Windows (core.autocrlf=true would otherwise turn them into CRLF and break `set -u`).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.onnx binary

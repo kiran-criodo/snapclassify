@@ -1,0 +1,6 @@
+# What Streamlit Community Cloud installs for this app (this file wins over the repo's requirements.txt).
+# No torch or torchvision: the model runs on ONNX Runtime.
+onnxruntime==1.30.0
+streamlit==1.64.0
+pillow>=11
+numpy>=2
