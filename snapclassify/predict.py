@@ -3,8 +3,8 @@
 This file must never import torch or torchvision: the app installs from app/requirements.txt, which has neither,
 so it starts fast and fits the free host's memory.
 
-    preprocess()   the evaluation transform, rewritten with PIL and NumPy                    TODO
-    predict()      softmax, the top three, and "not sure" below the threshold                TODO
+    preprocess()   the evaluation transform, rewritten with PIL and NumPy
+    predict()      softmax, the top three, and "not sure" below the threshold
 
     python -m snapclassify.predict my_pet.jpg
 """
@@ -36,32 +36,28 @@ def load_model(model_dir: str | Path = MODEL_DIR):
 
 def preprocess(image: Image.Image) -> np.ndarray:
     """A (1, 3, CROP, CROP) float32 array identical (within 1e-5) to data.eval_transform() on the same image."""
-    # TODO: CRIO_TASK_MODULE_SNAP
-    # Match torchvision's Resize(RESIZE) -> CenterCrop(CROP) -> ToTensor -> Normalize(MEAN, STD), step by step:
-    # 1. image.convert("RGB") (a PNG may have an alpha channel; a scan may be greyscale).
-    # 2. Resize so the SHORTER side is RESIZE, keeping the aspect ratio. The longer side is
-    #    int(RESIZE * long / short): int() truncates, exactly as torchvision does. Use
-    #    image.resize((new_w, new_h), Image.BILINEAR).
-    # 3. Centre crop: left = int(round((new_w - CROP) / 2)), top = int(round((new_h - CROP) / 2));
-    #    image.crop((left, top, left + CROP, top + CROP)).
-    # 4. np.asarray(...).astype(np.float32) / 255, then subtract MEAN and divide by STD per channel (float32 arrays).
-    # 5. HWC -> CHW (transpose(2, 0, 1)), then add the batch dimension: shape (1, 3, CROP, CROP).
-    # Test with: pytest tests/visible/test_ship.py -k preprocess
-    raise NotImplementedError("TODO preprocess(): the evaluation transform in PIL and NumPy")
+    image = image.convert("RGB")
+    w, h = image.size
+    short, long = min(w, h), max(w, h)
+    scaled = int(RESIZE * long / short)                              # int() truncates, exactly as torchvision does
+    new_w, new_h = (RESIZE, scaled) if w <= h else (scaled, RESIZE)
+    image = image.resize((new_w, new_h), Image.BILINEAR)
+    left, top = round((new_w - CROP) / 2), round((new_h - CROP) / 2)
+    image = image.crop((left, top, left + CROP, top + CROP))
+    x = np.asarray(image).astype(np.float32) / 255
+    x = (x - np.array(MEAN, dtype=np.float32)) / np.array(STD, dtype=np.float32)
+    return x.transpose(2, 0, 1)[None]
 
 
 def predict(image: Image.Image, session, labels: list[str], threshold: float = 0.5, k: int = 3) -> dict:
     """{"suggestion": the top breed, or None when not sure; "not_sure": bool;
         "top": [{"breed", "confidence"}, ...] (k of them, most confident first)}"""
-    # TODO: CRIO_TASK_MODULE_SNAP
-    # 1. logits = session.run(None, {"image": preprocess(image)})[0][0]  (one row: a score per breed)
-    # 2. Softmax, computed stably: subtract the largest logit before np.exp, then divide by the sum.
-    # 3. The k most confident breeds, highest first (np.argsort(-probs)[:k]), as
-    #    {"breed": labels[i], "confidence": float(probs[i])}.
-    # 4. not_sure = bool(the top confidence < threshold), a Python bool like the float() confidences; suggestion =
-    #    the top breed, or None when not sure. The top k are returned either way: the volunteer can still pick.
-    # Test with: pytest tests/visible/test_ship.py -k predict
-    raise NotImplementedError("TODO predict(): softmax, the top k, and not sure below the threshold")
+    logits = session.run(None, {"image": preprocess(image)})[0][0]
+    e = np.exp(logits - logits.max())
+    probs = e / e.sum()
+    top = [{"breed": labels[i], "confidence": float(probs[i])} for i in np.argsort(-probs)[:k]]
+    not_sure = bool(top[0]["confidence"] < threshold)
+    return {"suggestion": None if not_sure else top[0]["breed"], "not_sure": not_sure, "top": top}
 
 
 def main(argv: list[str] | None = None) -> int:

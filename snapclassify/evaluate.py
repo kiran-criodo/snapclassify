@@ -1,9 +1,9 @@
 """Honest evaluation: the test split, per-class numbers, the confusions, and the CNN against Gemini.
 
-    topk_accuracy()        the share of photos whose breed is in the model's top k                       TODO
-    per_class_accuracy()   accuracy per breed (None for a breed with no test photos)                    TODO
-    most_confused()        the (true breed, predicted breed, count) pairs the model mixes up most       TODO
-    compare_table()        the CNN and the LLM on the same photos: accuracy, p50 latency, cost per 1,000   TODO
+    topk_accuracy()        the share of photos whose breed is in the model's top k
+    per_class_accuracy()   accuracy per breed (None for a breed with no test photos)
+    most_confused()        the (true breed, predicted breed, count) pairs the model mixes up most
+    compare_table()        the CNN and the LLM on the same photos: accuracy, p50 latency, cost per 1,000
     collect_logits(), threshold_table(), write_report()                                                  given
 
     python -m snapclassify.evaluate --synthetic                # checks the code on generated images
@@ -17,6 +17,7 @@ import json
 import os
 import random
 import time
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -31,30 +32,24 @@ def _name(s) -> str | None:
 
 def topk_accuracy(logits: np.ndarray, targets: np.ndarray, k: int = 1) -> float:
     """logits: (n, classes) scores; targets: (n,) class indices."""
-    # TODO: CRIO_TASK_MODULE_SNAP
-    # The k highest-scoring classes of each row: np.argsort(-logits, axis=1)[:, :k]. A row counts when its target
-    # is among them. Return the share of rows that count (k=1 is plain accuracy; k=3 is "in the top three").
-    # Test with: pytest tests/visible/test_evaluate.py -k topk
-    raise NotImplementedError("TODO topk_accuracy(): the share of rows whose target is in the top k")
+    top = np.argsort(-logits, axis=1)[:, :k]
+    return float((top == targets[:, None]).any(axis=1).mean())
 
 
 def per_class_accuracy(preds: np.ndarray, targets: np.ndarray, num_classes: int) -> list[float | None]:
     """preds and targets: (n,) class indices. One entry per class, in class order."""
-    # TODO: CRIO_TASK_MODULE_SNAP
-    # For each class c: among the rows whose target is c, the share whose prediction is also c.
-    # A class with no rows gets None, not 0: "no test photos" isn't "always wrong".
-    # Test with: pytest tests/visible/test_evaluate.py -k per_class
-    raise NotImplementedError("TODO per_class_accuracy(): accuracy per class, None for a class with no rows")
+    out: list[float | None] = []
+    for c in range(num_classes):
+        rows = targets == c
+        out.append(float((preds[rows] == c).mean()) if rows.any() else None)
+    return out
 
 
 def most_confused(preds: np.ndarray, targets: np.ndarray, class_names: list[str], n: int = 5) -> list[tuple[str, str, int]]:
     """The n most frequent mistakes as (true breed, predicted breed, count)."""
-    # TODO: CRIO_TASK_MODULE_SNAP
-    # Count every (target, prediction) pair where they differ. Sort by count, highest first, then by the true
-    # breed's name, then the predicted breed's name (so ties always come out in the same order). Return the first
-    # n as (class_names[target], class_names[prediction], count).
-    # Test with: pytest tests/visible/test_evaluate.py -k confused
-    raise NotImplementedError("TODO most_confused(): the n most frequent mistakes, ties in name order")
+    counts = Counter((class_names[t], class_names[p]) for t, p in zip(targets.tolist(), preds.tolist()) if t != p)
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1]))
+    return [(true, pred, count) for (true, pred), count in ranked[:n]]
 
 
 def compare_table(cnn_rows: list[dict], llm_rows: list[dict], llm_model: str,
@@ -62,18 +57,15 @@ def compare_table(cnn_rows: list[dict], llm_rows: list[dict], llm_model: str,
     """Both models on the same photos. A row: {"target": breed, "label": breed or None, "latency_s", and for the LLM
     "input_tokens", "output_tokens" and "error" (None, or why the call failed)}. Returns one dict per model:
     {"model", "n", "accuracy", "p50_s", "cost_per_1k"}."""
-    # TODO: CRIO_TASK_MODULE_SNAP
-    # For each side:
-    #   accuracy     the share of rows whose label matches the target (compare them with _name(), which ignores
-    #                case, spaces and underscores); a None label (an unreadable reply, a failed call) is wrong
-    #   p50_s        the median latency_s (np.median)
-    #   cost_per_1k  the CNN: 0.0 (it runs on a CPU you already pay for). The LLM: 1,000 x the mean, over the rows
-    #                whose call succeeded (r.get("error") is None), of
-    #                (input_tokens x prices["input"] + output_tokens x prices["output"]) / 1,000,000
-    #                (a failed call costs nothing and would make the price look lower than it is)
-    # Return [{"model": "snapclassify (CPU)", ...}, {"model": llm_model, ...}], with "n" the number of rows.
-    # Test with: pytest tests/visible/test_evaluate.py -k compare
-    raise NotImplementedError("TODO compare_table(): accuracy, p50 latency and cost per 1,000 for both models")
+    def side(model: str, rows: list[dict], cost_per_1k: float | None) -> dict:
+        right = sum(r["label"] is not None and _name(r["label"]) == _name(r["target"]) for r in rows)
+        return {"model": model, "n": len(rows), "accuracy": right / len(rows),
+                "p50_s": float(np.median([r["latency_s"] for r in rows])), "cost_per_1k": cost_per_1k}
+
+    costs = [(r["input_tokens"] * prices["input"] + r["output_tokens"] * prices["output"]) / 1_000_000
+             for r in llm_rows if r.get("error") is None]
+    llm_cost = 1000 * float(np.mean(costs)) if costs else None      # None: every call failed, so no price to report
+    return [side("snapclassify (CPU)", cnn_rows, 0.0), side(llm_model, llm_rows, llm_cost)]
 
 
 def softmax(logits: np.ndarray) -> np.ndarray:
